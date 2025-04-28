@@ -74,25 +74,52 @@ export default function ExtremeTicTacToe() {
                 {board.map((smallBoard, bigIndex) => (
                     <div
                         key={bigIndex}
-                        className={`grid grid-cols-3 gap-1 p-2 sm:gap-2 rounded-lg border-2 p-1 sm:p-2 aspect-square transition ${activeBoard === null || activeBoard === bigIndex
+                        className={`gap-1 p-2 sm:gap-2 rounded-lg border-2 p-1 sm:p-2 aspect-square transition ${activeBoard === null || activeBoard === bigIndex
                             ? "border-blue-500"
                             : "border-gray-400 opacity-50"
-                            } ${smallWins[bigIndex] ? "bg-green-100" : ""}`}
+                            } ${smallWins[bigIndex] ? "flex items-center bg-green-100" : "grid grid-cols-3"}`}
                     >
-                        {smallBoard.map((cell, smallIndex) => (
-                            <button
-                                key={smallIndex}
-                                className="w-full h-full flex items-center justify-center border rounded-md text-base sm:text-xl font-bold hover:bg-gray-200 transition active:scale-95"
-                                onClick={() => handleClick(bigIndex, smallIndex)}
-                            >
-                                <span className="block w-6 h-6 sm:w-8 sm:h-8 items-center">
-                                    {cell}
-                                </span>
-                            </button>
-                        ))}
+                        {smallWins[bigIndex] ? (
+                            <div className="w-full h-full flex items-center justify-center text-6xl sm:text-8xl font-extrabold text-green-600 animate-pop">
+                                {smallWins[bigIndex]}
+                            </div>
+                        ) : (
+                            smallBoard.map((cell, smallIndex) => (
+                                <button
+                                    key={smallIndex}
+                                    className="w-full h-full flex items-center justify-center border rounded-md text-base sm:text-xl font-bold hover:bg-gray-200 transition active:scale-95"
+                                    onClick={() => handleClick(bigIndex, smallIndex)}
+                                >
+                                    <span className="block w-6 h-6 sm:w-8 sm:h-8 items-center">
+                                        {cell}
+                                    </span>
+                                </button>
+                            ))
+                        )}
                     </div>
                 ))}
             </div>
+
+            {/* Small win animation */}
+            <style>{`
+                @keyframes pop {
+                0% {
+                    opacity: 0;
+                    transform: scale(0.5);
+                }
+                60% {
+                    opacity: 1;
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
+                }
+                }
+                .animate-pop {
+                animation: pop 0.5s ease-out forwards;
+                }
+            `}</style>
+
         </div>
     );
 }
