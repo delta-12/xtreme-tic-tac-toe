@@ -69,6 +69,15 @@ export default function ExtremeTicTacToe() {
     const handleClick = (bigIndex, smallIndex) => {
         if (smallWins[bigIndex] || board[bigIndex][smallIndex]) return;
         if (activeBoard !== null && activeBoard !== bigIndex) return;
+        // TODO prevent player from making move on opponent's turn
+
+        if (socket.current) {
+            socket.current.sendMessage(JSON.stringify({
+                type: "move",
+                big_index: bigIndex,
+                small_index: smallIndex
+            }))
+        }
 
         const newBoard = board.map((smallBoard, i) =>
             i === bigIndex
@@ -117,6 +126,7 @@ export default function ExtremeTicTacToe() {
     };
 
     const overallWinner = checkWinner(smallWins);
+    const opponent = player ? player === "X" ? "O" : "X" : "";
 
     return (
         <div className="flex flex-col items-center p-4 space-y-4 min-h-screen">
@@ -126,10 +136,13 @@ export default function ExtremeTicTacToe() {
                     {overallWinner} wins the game!
                 </div>
             ) : (
-                <div className="text-lg">Game ID: {gameID}</div>
+                <>
+                    <div className="text-lg">Game ID: {gameID}</div>
+                    <div className="text-lg">{currentPlayer ? currentPlayer === player ? "Your turn" : "Opponent's turn" : "" }</div>
+                </>
             )}
             <div className="flex w-full lg:max-w-4xl lg:w-2/5 gap-5">
-                <div className="w-full rounded-lg border-2 p-1 sm:p-2">
+                <div className={`w-full rounded-lg border-2 p-1 sm:p-2 ${currentPlayer === player ? "" : "border-gray-400 opacity-50"}`}>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <h2 className="text-xl font-bold">You</h2>
@@ -140,14 +153,14 @@ export default function ExtremeTicTacToe() {
                         </div>
                     </div>
                 </div>
-                <div className="w-full rounded-lg border-2 p-1 sm:p-2">
+                <div className={`w-full rounded-lg border-2 p-1 sm:p-2 ${currentPlayer === opponent ? "" : "border-gray-400 opacity-50"}`}>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <h2 className="text-xl font-bold">Opponent</h2>
                             {player ? player === "X" ? playerOStatus : playerXStatus : ""}
                         </div>
                         <div className={`w-full h-full flex items-center justify-center text-6xl sm:text-8xl font-extrabold ${player ? player === "X" ? "text-red-600" : "text-green-600" : ""}`}>
-                            {player ? player === "X" ? "O" : "X" : ""}
+                            {opponent}
                         </div>
                     </div>
                 </div>

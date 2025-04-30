@@ -10,6 +10,8 @@ from enum import Enum, auto
 from random import randint
 from uuid import uuid4
 
+# TODO check for correct types in messages (make a message validator)
+
 
 class Error(Enum):
     GAME_NOT_FOUND = auto()
@@ -90,8 +92,44 @@ async def send_player_status(key):
 
 # Handle connection
 async def handle_connection(key):
+    game = GAMES[JOIN[key]["game_id"]].copy()
+
     async for message in JOIN[key]["websocket"]:
-        print(json.loads(message))
+        parsed_message = json.loads(message)
+        current_player = game["state"]["current_player"]
+
+        if "type" in parsed_message and parsed_message["type"] == "move":
+            big_index = parsed_message["big_index"]
+            small_index = parsed_message["small_index"]
+
+            if current_player == "X" and game["player_x"] != key:
+                await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
+            elif current_player == "O" and game["player_o"] != key:
+                await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
+            elif (
+                game["state"]["small_wins"][small_index] is not None
+                or game["state"]["board"][big_index][small_index] is not None
+            ):
+                await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
+            elif (
+                game["state"]["active_board"] is not None
+                and game["state"]["active_board"] is not big_index
+            ):
+                await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
+            else:
+                # TODO update game boards
+                # TODO check for winner
+
+                if current_player == "X":
+                    game["state"]["current_player"] = "O"
+                else:
+                    game["state"]["current_player"] = "X"
+
+                # TODO set next active board
+                # TODO send updated state
+        else:
+            await error(JOIN[key]["websocket"], Error.INVALID_TYPE)
+
         # TODO handle game end
 
 
