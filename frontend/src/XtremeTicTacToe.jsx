@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Socket } from "./Socket";
 
 const initialBoard = () => Array(9).fill(null).map(() => Array(9).fill(null));
 
@@ -7,6 +8,53 @@ export default function ExtremeTicTacToe() {
     const [currentPlayer, setCurrentPlayer] = useState("X");
     const [activeBoard, setActiveBoard] = useState(null); // null = any board
     const [smallWins, setSmallWins] = useState(Array(9).fill(null)); // track mini board winners
+    const [player, setPlayer] = useState(null);
+    
+    const socket = useRef(null);
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+
+        socket.current = new Socket(
+            "ws://localhost:10801/",
+            () => {
+                socket.current.sendMessage(JSON.stringify({
+                    type: "connect",
+                    game_id: queryParams.get("game_id")
+                }));
+            },
+            message => {
+                const parsed_message = JSON.parse(message);
+
+                switch (parsed_message.type) {
+                    case "error":
+                        alert(parsed_message.error);
+                        break;
+                    case "state":
+                        setBoard(parsed_message.state.board);
+                        setCurrentPlayer(parsed_message.state.current_player);
+                        setActiveBoard(parsed_message.state.active_board);
+                        setSmallWins(parsed_message.state.small_wins);
+                        break;
+                    case "player":
+                        setPlayer(parsed_message.player)
+                        break;
+                    default:
+                        break;
+                }
+            },
+            event => {
+                socket.current = null;
+            },
+            error => { alert(error) }
+        );
+
+        return () => {
+            if (socket.current) {
+                socket.current.close();
+            }
+        }
+    }, []);
 
     const handleClick = (bigIndex, smallIndex) => {
         if (smallWins[bigIndex] || board[bigIndex][smallIndex]) return;
@@ -68,7 +116,10 @@ export default function ExtremeTicTacToe() {
                     {overallWinner} wins the game!
                 </div>
             ) : (
-                <div className="text-lg">Current Player: {currentPlayer}</div>
+                <>
+                    <div className="text-lg">Player: {player}</div>
+                    <div className="text-lg">Current Player: {currentPlayer}</div>
+                </>
             )}
             <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-4xl lg:w-2/5 sm:w-full p-2 sm:p-4">
                 {board.map((smallBoard, bigIndex) => (

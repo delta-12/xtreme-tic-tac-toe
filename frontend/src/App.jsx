@@ -1,4 +1,4 @@
-import ExtremeTicTacToe from './XtremeTicTacToe'
+import ExtremeTicTacToe from './XtremeTicTacToe';
 
 function App() {
   return (
