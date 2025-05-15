@@ -46,6 +46,7 @@ def check_winner(cells):
             return cells[line[0]]
     return None
 
+
 def is_board_full(cells):
     for cell in cells:
         if cell is None:
@@ -165,7 +166,9 @@ async def handle_connection(key):
                 else:
                     game["state"]["current_player"] = "X"
 
-                if game["state"]["small_wins"][small_index] is not None or  is_board_full(game["state"]["board"][small_index]):
+                if game["state"]["small_wins"][
+                    small_index
+                ] is not None or is_board_full(game["state"]["board"][small_index]):
                     game["state"]["active_board"] = None
                 else:
                     game["state"]["active_board"] = small_index
