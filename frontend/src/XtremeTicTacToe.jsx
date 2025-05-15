@@ -69,7 +69,8 @@ export default function ExtremeTicTacToe() {
     const handleClick = (bigIndex, smallIndex) => {
         if (smallWins[bigIndex] || board[bigIndex][smallIndex]) return;
         if (activeBoard !== null && activeBoard !== bigIndex) return;
-        // TODO prevent player from making move on opponent's turn
+        if (currentPlayer !== player) return;
+        if (checkWinner(smallWins)) return;
 
         if (socket.current) {
             socket.current.sendMessage(JSON.stringify({
@@ -77,28 +78,6 @@ export default function ExtremeTicTacToe() {
                 big_index: bigIndex,
                 small_index: smallIndex
             }))
-        }
-
-        const newBoard = board.map((smallBoard, i) =>
-            i === bigIndex
-                ? smallBoard.map((cell, j) => (j === smallIndex ? currentPlayer : cell))
-                : smallBoard
-        );
-
-        const newSmallWins = smallWins.slice();
-        if (checkWinner(newBoard[bigIndex])) {
-            newSmallWins[bigIndex] = currentPlayer;
-        }
-
-        setBoard(newBoard);
-        setSmallWins(newSmallWins);
-        setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
-
-        const nextActiveBoard = smallIndex;
-        if (smallWins[nextActiveBoard] || isBoardFull(newBoard[nextActiveBoard])) {
-            setActiveBoard(null); // Player can play anywhere
-        } else {
-            setActiveBoard(nextActiveBoard);
         }
     };
 
@@ -119,10 +98,6 @@ export default function ExtremeTicTacToe() {
             }
         }
         return null;
-    };
-
-    const isBoardFull = (cells) => {
-        return cells.every(cell => cell !== null);
     };
 
     const overallWinner = checkWinner(smallWins);

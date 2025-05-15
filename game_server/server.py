@@ -24,6 +24,34 @@ class Error(Enum):
 JOIN = {}
 GAMES = {}
 
+LINES = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],  # rows
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],  # cols
+    [0, 4, 8],
+    [2, 4, 6],  # diags
+]
+
+
+def check_winner(cells):
+    for line in LINES:
+        if (
+            cells[line[0]] is not None
+            and cells[line[0]] == cells[line[1]]
+            and cells[line[0]] == cells[line[2]]
+        ):
+            return cells[line[0]]
+    return None
+
+def is_board_full(cells):
+    for cell in cells:
+        if cell is None:
+            return False
+    return True
+
 
 # Send an error message
 async def error(websocket, error):
@@ -92,9 +120,10 @@ async def send_player_status(key):
 
 # Handle connection
 async def handle_connection(key):
-    game = GAMES[JOIN[key]["game_id"]].copy()
 
     async for message in JOIN[key]["websocket"]:
+        game = GAMES[JOIN[key]["game_id"]].copy()
+
         parsed_message = json.loads(message)
         current_player = game["state"]["current_player"]
 
@@ -107,7 +136,7 @@ async def handle_connection(key):
             elif current_player == "O" and game["player_o"] != key:
                 await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
             elif (
-                game["state"]["small_wins"][small_index] is not None
+                game["state"]["small_wins"][big_index] is not None
                 or game["state"]["board"][big_index][small_index] is not None
             ):
                 await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
@@ -116,17 +145,35 @@ async def handle_connection(key):
                 and game["state"]["active_board"] is not big_index
             ):
                 await error(JOIN[key]["websocket"], Error.INVALID_MOVE)
+            elif check_winner(game["state"]["small_wins"]):
+                break
             else:
-                # TODO update game boards
-                # TODO check for winner
+                new_board = []
+                for i in range(len(game["state"]["board"])):
+                    small_board = game["state"]["board"][i]
+                    if i == big_index:
+                        small_board[small_index] = current_player
+                    new_board.append(small_board)
+                game["state"]["board"] = new_board
+
+                new_win = check_winner(new_board[big_index])
+                if new_win is not None:
+                    game["state"]["small_wins"][big_index] = new_win
 
                 if current_player == "X":
                     game["state"]["current_player"] = "O"
                 else:
                     game["state"]["current_player"] = "X"
 
-                # TODO set next active board
-                # TODO send updated state
+                if game["state"]["small_wins"][small_index] is not None or  is_board_full(game["state"]["board"][small_index]):
+                    game["state"]["active_board"] = None
+                else:
+                    game["state"]["active_board"] = small_index
+
+                if game["player_x"] is not None:
+                    await send_game_state(game["player_x"])
+                if game["player_o"] is not None:
+                    await send_game_state(game["player_o"])
         else:
             await error(JOIN[key]["websocket"], Error.INVALID_TYPE)
 
