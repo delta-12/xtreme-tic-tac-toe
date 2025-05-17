@@ -1,7 +1,30 @@
 import { useState, useEffect, useRef } from "react";
+import Confetti from 'react-confetti';
+import { useWindowSize } from '@react-hook/window-size';
 import { Socket } from "./Socket";
 
 const initialBoard = () => Array(9).fill(null).map(() => Array(9).fill(null));
+
+const WinnerModal = ({ isOpen, winnerName, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+                <h2 className="text-2xl font-bold mb-4 text-blue-500">Game Over!</h2>
+                <div className={`text-2xl font-bold mb-6 ${winnerName === "X" ? "text-green-500" : "text-red-500"}`}>
+                    🏆 {winnerName} wins the game 🏆
+                </div>
+                <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                >
+                    New Game
+                </button>
+            </div>
+        </div>
+    );
+};
 
 export default function ExtremeTicTacToe() {
     const [board, setBoard] = useState(initialBoard());
@@ -12,6 +35,8 @@ export default function ExtremeTicTacToe() {
     const [gameID, setGameID] = useState(null);
     const [playerXStatus, setPlayerXStatus] = useState("Disconnected");
     const [playerOStatus, setPlayerOStatus] = useState("Disconnected");
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [width, height] = useWindowSize();
 
     const socket = useRef(null);
 
@@ -19,7 +44,7 @@ export default function ExtremeTicTacToe() {
         const queryParams = new URLSearchParams(window.location.search);
 
         socket.current = new Socket(
-            "ws://localhost:10801/",
+            "ws://216.164.153.219:25566/",
             () => {
                 socket.current.sendMessage(JSON.stringify({
                     type: "connect",
@@ -66,6 +91,11 @@ export default function ExtremeTicTacToe() {
         }
     }, []);
 
+    const newGame = () => {
+        // TODO go to "new game" page once implemented rather than reloading
+        window.location.reload();
+    };
+
     const handleClick = (bigIndex, smallIndex) => {
         if (smallWins[bigIndex] || board[bigIndex][smallIndex]) return;
         if (activeBoard !== null && activeBoard !== bigIndex) return;
@@ -100,20 +130,33 @@ export default function ExtremeTicTacToe() {
         return null;
     };
 
-    const overallWinner = checkWinner(smallWins);
+    const checkOverallWinner = () => {
+        const winner = checkWinner(smallWins);
+
+        if (winner && !showConfetti) {
+            setShowConfetti(true);
+            setCurrentPlayer(null);
+        }
+
+        return winner;
+    };
+
+    const overallWinner = checkOverallWinner();
     const opponent = player ? player === "X" ? "O" : "X" : "";
 
     return (
         <div className="flex flex-col items-center p-4 space-y-4 min-h-screen">
             <h1 className="text-3xl font-bold mb-4">Extreme Tic Tac Toe</h1>
-            {overallWinner ? (
-                <div className="text-2xl font-bold text-green-500">
-                    {overallWinner} wins the game!
-                </div>
-            ) : (
+            <WinnerModal
+                isOpen={!!overallWinner}
+                winnerName={overallWinner}
+                onClose={newGame}
+            />
+            {showConfetti ? <Confetti width={width} height={height} /> : null}
+            <div className="text-lg">Game ID: {gameID}</div>
+            {overallWinner ? null : (
                 <>
-                    <div className="text-lg">Game ID: {gameID}</div>
-                    <div className="text-lg">{currentPlayer ? currentPlayer === player ? "Your turn" : "Opponent's turn" : "" }</div>
+                    <div className="text-lg">{currentPlayer ? currentPlayer === player ? "Your turn" : "Opponent's turn" : ""}</div>
                 </>
             )}
             <div className="flex w-full lg:max-w-4xl lg:w-2/5 gap-5">
