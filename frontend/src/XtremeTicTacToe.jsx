@@ -3,6 +3,8 @@ import Confetti from 'react-confetti';
 import { useWindowSize } from '@react-hook/window-size';
 import { Socket } from "./Socket";
 
+const baseLink = "http://xtt.surge.sh/?game_id=";
+
 const initialBoard = () => Array(9).fill(null).map(() => Array(9).fill(null));
 
 const WinnerModal = ({ isOpen, winnerName, onClose }) => {
@@ -26,6 +28,40 @@ const WinnerModal = ({ isOpen, winnerName, onClose }) => {
     );
 };
 
+const ShareLink = ({ isOpen, link, onClose, copied, setCopied }) => {
+    if (!isOpen) return null;
+
+    if (window.isSecureContext && navigator.clipboard) {
+        navigator.clipboard.writeText(link)
+            .then(() => {
+                setCopied(true);
+            });
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+                <h2 className="text-2xl font-bold text-blue-500">Share Link</h2>
+                <div className="text-gray-400">
+                    {link}
+                </div>
+                {copied ?
+                    <div className="text-green-300">
+                        ✓ Copied
+                    </div>
+                    : null
+                }
+                <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition mt-3"
+                >
+                    Done
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export default function ExtremeTicTacToe() {
     const [board, setBoard] = useState(initialBoard());
     const [currentPlayer, setCurrentPlayer] = useState("X");
@@ -37,6 +73,8 @@ export default function ExtremeTicTacToe() {
     const [playerOStatus, setPlayerOStatus] = useState("Disconnected");
     const [showConfetti, setShowConfetti] = useState(false);
     const [width, height] = useWindowSize();
+    const [shareLink, setShareLink] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     const socket = useRef(null);
 
@@ -92,7 +130,6 @@ export default function ExtremeTicTacToe() {
     }, []);
 
     const newGame = () => {
-        // TODO go to "new game" page once implemented rather than reloading
         window.location.reload();
     };
 
@@ -153,7 +190,25 @@ export default function ExtremeTicTacToe() {
                 onClose={newGame}
             />
             {showConfetti ? <Confetti width={width} height={height} /> : null}
-            <div className="text-lg">Game ID: {gameID}</div>
+            <div className="flex items-center">
+                <div className="text-lg mx-1">Game ID: {gameID}</div>
+                <button
+                    onClick={() => { setShareLink(true) }}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition mx-1"
+                >
+                    Share Link
+                </button>
+            </div>
+            <ShareLink
+                isOpen={shareLink}
+                link={baseLink + gameID}
+                onClose={() => {
+                    setShareLink(false);
+                    setCopied(false);
+                }}
+                copied={copied}
+                setCopied={setCopied}
+            />
             {overallWinner ? null : (
                 <>
                     <div className="text-lg">{currentPlayer ? currentPlayer === player ? "Your turn" : "Opponent's turn" : ""}</div>
