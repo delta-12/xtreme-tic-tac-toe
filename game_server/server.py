@@ -91,7 +91,7 @@ async def send_game_state(key):
                 "state": state,
                 "encrypted_state": b64encode(
                     FERNET.encrypt(json.dumps(state).encode())
-                ),
+                ).decode(),
             }
         )
     )
@@ -110,7 +110,9 @@ async def send_player_info(key):
             {
                 "type": "game_id",
                 "game_id": game_id,
-                "encrypted_game_id": b64encode(FERNET.encrypt(game_id.encode())),
+                "encrypted_game_id": b64encode(
+                    FERNET.encrypt(game_id.encode())
+                ).decode(),
             }
         )
     )
