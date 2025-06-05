@@ -9,6 +9,9 @@ import websockets
 from enum import Enum, auto
 from random import randint
 from uuid import uuid4
+from cryptography.fernet import Fernet
+from base64 import b64decode, b64encode
+from time import time
 
 # TODO check for correct types in messages (make a message validator)
 
@@ -34,6 +37,9 @@ LINES = [
     [0, 4, 8],
     [2, 4, 6],  # diags
 ]
+
+KEY = Fernet.generate_key()  # TODO replace with env key
+FERNET = Fernet(KEY)
 
 
 def check_winner(cells):
@@ -76,8 +82,18 @@ async def error(websocket, error):
 
 # Send game state to player
 async def send_game_state(key):
+    state = GAMES[JOIN[key]["game_id"]]["state"]
+    state["timestamp"] = time()
     await JOIN[key]["websocket"].send(
-        json.dumps({"type": "state", "state": GAMES[JOIN[key]["game_id"]]["state"]})
+        json.dumps(
+            {
+                "type": "state",
+                "state": state,
+                "encrypted_state": b64encode(
+                    FERNET.encrypt(json.dumps(state).encode())
+                ),
+            }
+        )
     )
 
 
@@ -90,7 +106,13 @@ async def send_player_info(key):
         player = "O"
 
     await JOIN[key]["websocket"].send(
-        json.dumps({"type": "game_id", "game_id": game_id})
+        json.dumps(
+            {
+                "type": "game_id",
+                "game_id": game_id,
+                "encrypted_game_id": b64encode(FERNET.encrypt(game_id.encode())),
+            }
+        )
     )
     await JOIN[key]["websocket"].send(
         json.dumps({"type": "player_assign", "player": player})
@@ -305,8 +327,8 @@ async def main():
     stop = loop.create_future()
     loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
 
-    port = int(os.environ.get("GAME_SERVER_PORT", "10801"))
-    async with websockets.serve(handler, "", port):
+    port = int(os.environ.get("GAME_SERVER_PORT", "25566"))
+    async with websockets.serve(handler, "0.0.0.0", port):
         await stop
 
 
