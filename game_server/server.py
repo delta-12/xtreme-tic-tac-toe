@@ -271,10 +271,10 @@ async def handle_game_id(websocket, game_id):
         await start_connection(key)
 
 
-async def handle_saved_game(websocket, saved_game):
-    # TODO
-    if not saved_game:
+async def handle_saved_game(websocket, parsed_message):
+    if not parsed_message:
         await error(websocket, Error.INVALID_SAVED_GAME)
+    # TODO decrypt and verify
     else:
         key = add_connection(websocket)
         # TODO
@@ -317,8 +317,13 @@ async def handler(websocket):
         await error(websocket, Error.INVALID_TYPE)
     elif "game_id" in parsed_message and parsed_message["game_id"] is not None:
         await handle_game_id(websocket, parsed_message["game_id"])
-    elif "saved_game" in parsed_message and parsed_message["saved_game"] is not None:
-        await handle_saved_game(websocket, parsed_message["saved_game"])
+    elif (
+        "encrypted_game_id" in parsed_message
+        and parsed_message["encrypted_game_id"] is not None
+        and "encrypted_state" in parsed_message
+        and parsed_message["encrypted_state"] is not None
+    ):
+        await handle_saved_game(websocket, parsed_message)
     else:
         await handle_new_game(websocket)
 

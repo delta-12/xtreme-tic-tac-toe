@@ -82,12 +82,15 @@ export default function ExtremeTicTacToe() {
         const queryParams = new URLSearchParams(window.location.search);
 
         socket.current = new Socket(
-            "ws://216.164.153.219:25566/",
+            `ws://${import.meta.env.VITE_SERVER_HOST ? import.meta.env.VITE_SERVER_HOST : "localhost"}:25566/`,
             () => {
-                socket.current.sendMessage(JSON.stringify({
+                let message = {
                     type: "connect",
-                    game_id: queryParams.get("game_id")
-                }));
+                    game_id: queryParams.get("game_id"),
+                    encrypted_game_id: localStorage.getItem("encrypted_game_id"),
+                    encrypted_state: localStorage.getItem("encrypted_state")
+                };
+                socket.current.sendMessage(JSON.stringify(message));
             },
             message => {
                 const parsed_message = JSON.parse(message);
@@ -101,12 +104,14 @@ export default function ExtremeTicTacToe() {
                         setCurrentPlayer(parsed_message.state.current_player);
                         setActiveBoard(parsed_message.state.active_board);
                         setSmallWins(parsed_message.state.small_wins);
+                        localStorage.setItem("encrypted_state", parsed_message.encrypted_state);
                         break;
                     case "game_id":
-                        setGameID(parsed_message.game_id)
+                        setGameID(parsed_message.game_id);
+                        localStorage.setItem("encrypted_game_id", parsed_message.encrypted_game_id);
                         break;
                     case "player_assign":
-                        setPlayer(parsed_message.player)
+                        setPlayer(parsed_message.player);
                         break;
                     case "player_status":
                         setPlayerXStatus(parsed_message.player_x);
