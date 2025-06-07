@@ -88,7 +88,8 @@ export default function ExtremeTicTacToe() {
                     type: "connect",
                     game_id: queryParams.get("game_id"),
                     encrypted_game_id: localStorage.getItem("encrypted_game_id"),
-                    encrypted_state: localStorage.getItem("encrypted_state")
+                    encrypted_state: localStorage.getItem("encrypted_state"),
+                    encrypted_player: localStorage.getItem("encrypted_player")
                 };
                 socket.current.sendMessage(JSON.stringify(message));
             },
@@ -112,6 +113,7 @@ export default function ExtremeTicTacToe() {
                         break;
                     case "player_assign":
                         setPlayer(parsed_message.player);
+                        localStorage.setItem("encrypted_player", parsed_message.encrypted_player);
                         break;
                     case "player_status":
                         setPlayerXStatus(parsed_message.player_x);

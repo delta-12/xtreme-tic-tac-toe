@@ -117,7 +117,13 @@ async def send_player_info(key):
         )
     )
     await JOIN[key]["websocket"].send(
-        json.dumps({"type": "player_assign", "player": player})
+        json.dumps(
+            {
+                "type": "player_assign",
+                "player": player,
+                "encrypted_player": b64encode(FERNET.encrypt(player.encode())).decode(),
+            }
+        )
     )
 
 
@@ -274,11 +280,35 @@ async def handle_game_id(websocket, game_id):
 async def handle_saved_game(websocket, parsed_message):
     if not parsed_message:
         await error(websocket, Error.INVALID_SAVED_GAME)
-    # TODO decrypt and verify
     else:
-        key = add_connection(websocket)
-        # TODO
-        await start_connection(key)
+        try:
+            # TODO verify game_id is valid UUID
+            game_id = FERNET.decrypt(
+                b64decode(parsed_message["encrypted_game_id"])
+            ).decode()
+            # TODO verify game state is valid (i.e. dict has necessary keys)
+            game_state = json.loads(
+                FERNET.decrypt(b64decode(parsed_message["encrypted_state"])).decode()
+            )
+            # TODO verify player is valid (i.e. X or O)
+            player = FERNET.decrypt(
+                b64decode(parsed_message["encrypted_player"])
+            ).decode()
+            if game_id not in GAMES:
+                key = add_connection(websocket)
+                GAMES[game_id] = {
+                    "player_x": key if player == "X" else None,
+                    "player_o": key if player == "O" else None,
+                    "state": game_state,
+                }
+                JOIN[key]["game_id"] = game_id
+                await start_connection(key)
+            else:
+                if game_state["timestamp"] > GAMES[game_id]["state"]["timestamp"]:
+                    GAMES[game_id]["state"] = game_state
+                await handle_game_id(websocket, game_id)
+        except:
+            await error(websocket, Error.INVALID_SAVED_GAME)
 
 
 async def handle_new_game(websocket):
@@ -292,6 +322,7 @@ async def handle_new_game(websocket):
             "current_player": "X",
             "active_board": None,
             "small_wins": [],
+            "timestamp": time(),
         },
     }
     print("Started game", game_id)
@@ -322,6 +353,8 @@ async def handler(websocket):
         and parsed_message["encrypted_game_id"] is not None
         and "encrypted_state" in parsed_message
         and parsed_message["encrypted_state"] is not None
+        and "encrypted_player" in parsed_message
+        and parsed_message["encrypted_player"] is not None
     ):
         await handle_saved_game(websocket, parsed_message)
     else:
